@@ -22,7 +22,7 @@ if not os.path.exists(CSV_FILE):
     messagebox.showinfo("Input Error", "No data Found")
     
 if not os.path.exists(CSV_FILE2):
-    df = pd.DataFrame(columns=['Date','Bill Id','Customer Name','Phone Number','Item Id', 'Item Name', 'Quantity', 'Price','Total Price of Item','Total Amt. To Pay','Amt. Received','Pending Amt.'])
+    df = pd.DataFrame(columns=['Date','Bill Id','Customer Name','Phone Number','Item Id', 'Item Name', 'Quantity', 'Price','Total Price of Item','Total Amt. To Pay','Amt. Received','Pending Amt.','Return'])
     df.to_csv(CSV_FILE2, index=False)
     
 # Load the inventory data
@@ -82,7 +82,9 @@ def add_to_bill():
             tam=tam+total_price
             add_row_to_treeview(item_id, item_name, quantity, price, total_price)
             clear_fields()
-        update_tree(f"₹{tam:.2f}")
+            update_tree(f"₹{tam:.2f}")
+        elif fl[2]==1 and fl[0]==1:    
+            update_tree(f"₹{tam:.2f}")
         
         
         
@@ -189,7 +191,8 @@ def print_bill():
                                 'Total Price of Item': row[4],
                                 'Total Amt. To Pay': f"₹{tam:.2f}",
                                 'Amt. Received': f"₹{amt:.2f}",
-                                'Pending Amt.': f"₹{rem_amt:.2f}"
+                                'Pending Amt.': f"₹{rem_amt:.2f}",
+                                'Return': "0"
                             }
                             all_rows.append(new_row)
                             qt = dfi.loc[(dfi['Item Name'].str.upper() == row[1].upper()) & (dfi['Item ID'].str.upper() == row[0].upper()), 'Quantity'].values[0]
@@ -249,11 +252,11 @@ def reset_bill():
     else:    
         for row in treeview.get_children():
             treeview.delete(row)
-        global tam
-        tam=0
+        
         for row in summary_treeview.get_children():
             summary_treeview.delete(row)    
-    
+    global tam
+    tam=0
 
 # Clear input fields
 def clear_fields():
@@ -277,31 +280,63 @@ def clear_fields():
 
 def update_item(tam):
     flag = 0
+    fl=0
     item_id = combo_id.get().upper().replace(" ","")
+    current_columns = list(treeview["columns"])
     
     quantity = entry_quantity.get()
     price = entry_price.get()
     column_0_values = []
-    for item in treeview.get_children():  # Get all row IDs
-         if str(item_id) == (treeview.item(item)["values"][0]):
-             flag = 1
-             response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
-             if response:
-                 v = list(treeview.item(item)["values"])  
-                 v[2] = str(quantity)  
-                 v[3] = f"₹{float(price):.2f}"
-                 total_price = int(quantity) * int(price)
-                 
-                 tam=int(tam)-int(float(v[4].replace("₹", "")))+total_price
-                 
-                 v[4] = f"₹{float(total_price):.2f}"
-                 
-                 
-                 treeview.item(item, values=v)
-                 
-             else:
-                 pass
-    return flag,tam
+    if current_columns[0]=='Item ID':
+        for item in treeview.get_children():  # Get all row IDs
+             if str(item_id) == (treeview.item(item)["values"][0]):
+                 flag = 1
+                 response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
+                 if response:
+                     fl=1
+                     v = list(treeview.item(item)["values"])  
+                     v[2] = str(quantity)  
+                     v[3] = f"₹{float(price):.2f}"
+                     total_price = int(quantity) * int(price)
+                     
+                     tam=int(tam)-int(float(v[4].replace("₹", "")))+total_price
+                     
+                     v[4] = f"₹{float(total_price):.2f}"
+                     
+                     
+                     treeview.item(item, values=v)
+                     
+                 else:
+                     pass
+    else:
+        for item in treeview.get_children():  # Get all row IDs
+             if str(item_id) == (treeview.item(item)["values"][2]):
+                 row_id = summary_treeview.get_children()  # Assuming there's only one row
+                
+                 row_data = summary_treeview.item(row_id)["values"]
+                
+                 tam = row_data[0].replace("₹", "")
+                 tam=int(float(tam))    
+                 flag = 1
+                 response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
+                 if response:
+                     fl=1
+                     v = list(treeview.item(item)["values"])  
+                     v[4] = str(quantity)  
+                     v[5] = f"₹{float(price):.2f}"
+                     total_price = int(quantity) * int(price)
+                      
+                     
+                     tam=int(tam)-int(float(v[6].replace("₹", "")))+total_price
+                     
+                     v[6] = f"₹{float(total_price):.2f}"
+                     
+                     
+                     treeview.item(item, values=v)
+                 else:
+                     pass
+        
+    return flag,tam,fl
 
 def update_qt_n_price():
     d=load()
@@ -437,9 +472,9 @@ def add_column_to_start():
     if not current_columns[0]=='Bill ID':
         billcol = "Bill ID"
         cname="Customer Name"
+        ret="Return"
         
-        
-        updated_columns = [billcol]+[cname] + current_columns
+        updated_columns = [billcol]+[cname] + current_columns+[ret]
         treeview["columns"] = updated_columns
              
     else:
@@ -464,6 +499,7 @@ def add_column_to_start():
     treeview.heading("Quantity", text="Quantity")
     treeview.heading("Price", text="Price")
     treeview.heading("Total", text="Total")
+    treeview.heading("Return", text="Return")
     treeview.column("Bill ID", anchor="center", width=100, stretch=True)
     treeview.column("Customer Name", anchor="center", width=150, stretch=True)
     treeview.column("Item ID", anchor="center", width=80, stretch=True)
@@ -471,6 +507,7 @@ def add_column_to_start():
     treeview.column("Quantity", anchor="center", width=100, stretch=True)
     treeview.column("Price", anchor="center", width=100, stretch=True)
     treeview.column("Total", anchor="center", width=100, stretch=True)
+    treeview.column("Return", anchor="center", width=100, stretch=True)
     
     summary_treeview.heading("Amount", text="Total Amount")
     summary_treeview.heading("Amt. Received", text="Amt. Received")
@@ -606,20 +643,24 @@ def open_bill():
                 if response:
                     for item in treeview.get_children():
                         treeview.delete(item)
+                    for item in summary_treeview.get_children():
+                        summary_treeview.delete(item)
+                    tam = 0    
                     add_column_to_start()    
                     for i, row in df.iterrows():
                         if row['Bill Id']==bid:
                             ttam=row['Total Amt. To Pay']
                             amrcv=row['Amt. Received']
                             pmt=row['Pending Amt.']
+                            
                             if count == 0:
-                                treeview.insert("", "end",values=(bid,row['Customer Name'].upper(),row['Item Id'], row['Item Name'], int(row['Quantity']), row['Price'], row['Total Price of Item']))
+                                treeview.insert("", "end",values=(bid,row['Customer Name'].upper(),row['Item Id'], row['Item Name'], int(row['Quantity']), row['Price'], row['Total Price of Item'],int(row['Return'])))
                                 
                                 count+=1
                                 
                             else:
                                 
-                                treeview.insert("", "end",values=(" "," ",row['Item Id'], row['Item Name'], int(row['Quantity']), row['Price'], row['Total Price of Item']))
+                                treeview.insert("", "end",values=(" "," ",row['Item Id'], row['Item Name'], int(row['Quantity']), row['Price'], row['Total Price of Item'],int(row['Return'])))
                             
                             
                             update_tree(ttam,amrcv,pmt)
@@ -707,11 +748,11 @@ frame_forms_and_buttons.grid_columnconfigure(0, weight=1)
 frame_forms_and_buttons.grid_columnconfigure(1, weight=1)
 # Create the first form frame on the left
 frame_form_left = ctk.CTkFrame(frame_forms_and_buttons, corner_radius=10)
-frame_form_left.grid(row=0, column=0, padx=(10, 5), pady=7, sticky="nsew")
+frame_form_left.grid(row=0, column=0, padx=(7, 3.5), pady=7, sticky="nsew")
 
 # Create the second form frame on the right
 frame_form_right = ctk.CTkFrame(frame_forms_and_buttons, corner_radius=10)
-frame_form_right.grid(row=0, column=1, padx=(5, 10), pady=7, sticky="nsew")
+frame_form_right.grid(row=0, column=1, padx=(3.5, 7), pady=7, sticky="nsew")
 
 # Adjusting the column configuration to allocate space accordingly
 
@@ -768,22 +809,7 @@ ctk.CTkButton(frame_form_left, text="Clear", font=font_settings, command=clear_f
 
 ctk.CTkButton(frame_form_left, text="Reset Bill", font=font_settings, command=reset_bill, height=40,width=270).grid(row=5, column=0, padx=(10,5), pady=(2, 5), sticky="w")
 
-# Create input fields in the right form frame
-'''ctk.CTkLabel(frame_form_right, text="Bill Id:", font=font_settings, anchor="w").grid(row=0, column=0, sticky="w", padx=17, pady=10)
-entry_billid = ctk.CTkEntry(frame_form_right, font=font_settings, height=30)
-entry_billid.grid(row=0, column=1, padx=(15,120), pady=5, sticky="w")
 
-ctk.CTkLabel(frame_form_right, text="Customer Name:", font=font_settings, anchor="w").grid(row=1, column=0, sticky="w", padx=17, pady=10)
-entry_cname = ctk.CTkEntry(frame_form_right, font=font_settings, height=30)
-entry_cname.grid(row=1, column=1, padx=15, pady=5, sticky="ew")
-
-ctk.CTkLabel(frame_form_right, text="Phone Number:", font=font_settings, anchor="w").grid(row=2, column=0, sticky="w", padx=17, pady=10)
-entry_cnum = ctk.CTkEntry(frame_form_right, font=font_settings, height=30)
-entry_cnum.grid(row=2, column=1, padx=15, pady=5, sticky="ew")
-
-ctk.CTkLabel(frame_form_right, text="Amount Paid:", font=font_settings, anchor="w").grid(row=3, column=0, sticky="w", padx=17, pady=10)
-entry_amount = ctk.CTkEntry(frame_form_right, font=font_settings, height=30)
-entry_amount.grid(row=3, column=1, padx=15, pady=5, sticky="ew")'''
 ctk.CTkButton(frame_form_right, text="Print Bill", font=font_settings, command=print_bill,height=50).grid(padx=15, pady=(10,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Open Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Update Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
@@ -838,3 +864,4 @@ root.mainloop()
 
 
 
+ 
