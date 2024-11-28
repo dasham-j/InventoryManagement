@@ -53,7 +53,7 @@ def add_to_bill():
     item_name = entry_name.get().upper().replace(" ","")
     quantity = entry_quantity.get()
     price = entry_price.get()
-    
+    current_columns = list(treeview["columns"])
 
     if not item_id or not item_name or not quantity or not price:
         messagebox.showinfo("Input Error", "Fill all the fields properly")
@@ -78,13 +78,27 @@ def add_to_bill():
         tam=fl[1]
         
         if fl[0] == 0:
-            total_price = int(quantity) * price
-            tam=tam+total_price
-            add_row_to_treeview(item_id, item_name, quantity, price, total_price)
-            clear_fields()
-            update_tree(f"₹{tam:.2f}")
+            if current_columns[0]=='Item ID':
+                total_price = int(quantity) * price
+                tam=tam+total_price
+                add_row_to_treeview(item_id, item_name, quantity, price, total_price)
+                clear_fields()
+                update_tree(f"₹{tam:.2f}")
+            else:
+                total_price = int(quantity) * price
+                row_id = summary_treeview.get_children()  # Assuming there's only one row
+                
+                row_data = summary_treeview.item(row_id)["values"]
+                
+                tam = row_data[0].replace("₹", "")
+                tam=int(float(tam))
+                tam=tam+total_price   
+                treeview.insert("", "end",values=(" "," ",item_id, item_name, quantity, price, price,0))
+                clear_fields()
+                update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
+
         elif fl[2]==1 and fl[0]==1:    
-            update_tree(f"₹{tam:.2f}")
+            update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
         
         
         
@@ -321,7 +335,19 @@ def update_item(tam):
                  response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
                  if response:
                      fl=1
-                     v = list(treeview.item(item)["values"])  
+                     v = list(treeview.item(item)["values"])
+                     if not (int(quantity)-v[4])>=0 and not int(quantity)==0 :
+                         res = messagebox.askyesno("Confirmation", f"Would you like to mark {v[4]-int(quantity)} units of {item_id} as returned?")
+                         if res:
+                             v[7]=v[4]-int(quantity)
+                         else:
+                             pass
+                     if int(quantity)==0:
+                         res = messagebox.askyesno("Confirmation", f"Would you like to mark all units of {item_id} as returned?")
+                         if res:
+                             v[7]="FULL"
+                         else:
+                             pass
                      v[4] = str(quantity)  
                      v[5] = f"₹{float(price):.2f}"
                      total_price = int(quantity) * int(price)
@@ -351,7 +377,7 @@ def update_qt_n_price():
             
         else:
             for item in treeview.get_children():  # Get all row IDs
-                 if str(item_id) == (treeview.item(item)["values"][0]):
+                 if str(item_id) == (treeview.item(item)["values"][0]) or str(item_id) == (treeview.item(item)["values"][2]) :
                      flag=1
                  
             if flag==1:
@@ -567,7 +593,7 @@ def on_item_selectedn(var):
     
 
 def open_bill():
-    
+    clear_fields()
     df=pd.read_csv(CSV_FILE2)
     iterate=df['Bill Id'].astype(str)
     iterate1=df['Customer Name'].astype(str)
