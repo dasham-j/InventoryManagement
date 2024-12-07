@@ -93,7 +93,7 @@ def add_to_bill():
                 tam = row_data[0].replace("₹", "")
                 tam=int(float(tam))
                 tam=tam+total_price   
-                treeview.insert("", "end",values=(" "," ",item_id, item_name, quantity, price, price,0))
+                treeview.insert("", "end",values=(" "," ",item_id, item_name, quantity,f"₹{price:.2f}", f"₹{total_price:.2f}",0))
                 clear_fields()
                 update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
 
@@ -232,7 +232,7 @@ def reset_bill():
     columns = ("Item ID","Item Name","Quantity","Price","Total")
     columns2=("Amount")
     current_columns = list(treeview["columns"])
-    current_columns2 = list(summary_treeview["columns"])
+    
     if not current_columns[0]=='Item ID':
         response = messagebox.askyesno("Confirmation", f"Do you want to reset the bill? This will erase all unsaved data.")
         if response:
@@ -276,8 +276,7 @@ def reset_bill():
 def clear_fields():
     d=load()
     
-    cid=combo_id.get()
-    nm=entry_name.get()
+    
  
     combo_id._entry.delete(0, "end")
     entry_name._entry.delete(0, "end")
@@ -302,70 +301,164 @@ def update_item(tam):
     price = entry_price.get()
     column_0_values = []
     if current_columns[0]=='Item ID':
-        for item in treeview.get_children():  # Get all row IDs
-             if str(item_id) == (treeview.item(item)["values"][0]):
-                 flag = 1
-                 response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
-                 if response:
-                     fl=1
-                     v = list(treeview.item(item)["values"])  
-                     v[2] = str(quantity)  
-                     v[3] = f"₹{float(price):.2f}"
-                     total_price = int(quantity) * int(price)
+        for item in treeview.get_children():
+             if not treeview.exists(item):
+                 continue 
+             else: 
+                 if str(item_id) == (treeview.item(item)["values"][0]):
+                     flag = 1
+                     response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
+                     if response:
+                        fl=1
+                        v = list(treeview.item(item)["values"])  
+                        v[2] = str(quantity)  
+                        v[3] = f"₹{float(price):.2f}"
+                        total_price = int(quantity) * int(price)
+                        
+                        tam=int(tam)-int(float(v[4].replace("₹", "")))+total_price
+                        
+                        v[4] = f"₹{float(total_price):.2f}"
+                        
+                        
+                        treeview.item(item, values=v)
                      
-                     tam=int(tam)-int(float(v[4].replace("₹", "")))+total_price
-                     
-                     v[4] = f"₹{float(total_price):.2f}"
-                     
-                     
-                     treeview.item(item, values=v)
-                     
-                 else:
-                     pass
+                     else:
+                        pass
     else:
-        for item in treeview.get_children():  # Get all row IDs
-             if str(item_id) == (treeview.item(item)["values"][2]):
-                 row_id = summary_treeview.get_children()  # Assuming there's only one row
-                
-                 row_data = summary_treeview.item(row_id)["values"]
-                
-                 tam = row_data[0].replace("₹", "")
-                 tam=int(float(tam))    
-                 flag = 1
-                 response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
-                 if response:
-                     fl=1
-                     v = list(treeview.item(item)["values"])
-                     if not (int(quantity)-v[4])>=0 and not int(quantity)==0 :
-                         res = messagebox.askyesno("Confirmation", f"Would you like to mark {v[4]-int(quantity)} units of {item_id} as returned?")
-                         if res:
-                             v[7]=v[4]-int(quantity)
-                         else:
-                             pass
-                     if int(quantity)==0:
-                         res = messagebox.askyesno("Confirmation", f"Would you like to mark all units of {item_id} as returned?")
-                         if res:
-                             v[7]="FULL"
-                         else:
-                             pass
-                     v[4] = str(quantity)  
-                     v[5] = f"₹{float(price):.2f}"
-                     total_price = int(quantity) * int(price)
-                      
-                     
-                     tam=int(tam)-int(float(v[6].replace("₹", "")))+total_price
-                     
-                     v[6] = f"₹{float(total_price):.2f}"
-                     
-                     
-                     treeview.item(item, values=v)
-                 else:
-                     pass
-        
-    return flag,tam,fl
+        for item in treeview.get_children():
+             if not treeview.exists(item):
+                 continue
+             else:
+                 rw = treeview.item(item, "values")
+                 
+                 if str(item_id) == (rw[2]):
+                     row_id = summary_treeview.get_children()  
+                    
+                     row_data = summary_treeview.item(row_id)["values"]
+                    
+                     tam = row_data[0].replace("₹", "")
+                     tam=int(float(tam))    
+                     flag = 1
+                     flag2=1
+                     def delete_and_shift_up(row_id, columns_to_delete):
+                        rows = list(treeview.get_children())
+                            
+                            
+
+                        # Get the index of the target row
+                        target_index = rows.index(row_id)
+
+                        # Start processing from the target row to the last row
+                        for i in range(target_index, len(rows) - 1):
+                            current_row_id = rows[i]
+                            next_row_id = rows[i + 1]
+
+                            # Get values of the current and next rows
+                            current_values = list(treeview.item(current_row_id, "values"))
+                            next_values = list(treeview.item(next_row_id, "values"))
+
+                            # Replace the current row's target columns with the next row's values
+                            for col_index in columns_to_delete:
+                                current_values[col_index] = next_values[col_index]
+
+                            # Update the current row
+                            treeview.item(current_row_id, values=current_values)
+                        
+                        
+                        # Clear the target columns in the last row
+                        last_row_id = rows[-1]
+                        last_values = list(treeview.item(last_row_id, "values"))
+                        for col_index in columns_to_delete:
+                            last_values[col_index] = ""
+                        treeview.item(last_row_id, values=last_values)
+                        treeview.delete(last_row_id)
+
+                        
+                     response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
+                     if response:
+                        fl=1
+                        v = list(treeview.item(item)["values"])
+                        if not (int(quantity)-v[4])>=0 and not int(quantity)==0 :
+                            res = messagebox.askyesno("Confirmation", f"Would you like to mark {v[4]-int(quantity)} units of {item_id} as returned?")
+                            if res:
+                                v[7]=v[4]-int(quantity)
+                            else:
+                                pass
+                        if int(quantity)==0:
+                            fl=1
+                            if len(treeview.get_children())<2:
+                                fl=0
+                                flag2=0
+                                row1 = treeview.get_children()[0]
+
+
+                                bid = treeview.item(row1, "values")[0]
+                                response = messagebox.askyesno("Confirmation", f"Do you want to delete the bill with ID: {bid}?")
+                                if response:
+                                    vl=list(treeview.item(row1, "values"))
+                                    for i in range(2,8):
+                                        vl[i]="Deleted"
+                                    update_tree("₹0.00","₹0.00","₹0.00")
+                                    tam=0
+                                    treeview.item(row1, values=vl)
+                                else:
+                                    messagebox.showinfo("Input Error", "The quantity of the sole remaining item in the bill cannot be zero.")
+                                    
+                                
+                            
+                            
+                            if fl==1:
+                                res = messagebox.askyesno("Confirmation", f"Would you like to mark all units of {item_id} as returned?")
+                                if res:
+                                    v[7]="FULL"
+                                else:
+                                    rows = list(treeview.get_children())  # Get all row IDs
+                                    
+                                    flag2=0
+                                    
+                                    for i in rows:
+                                        row_values = treeview.item(i, "values")
+                                        if str(item_id) == (row_values[2]):
+                                            rw=i
+                                            
+                                    v[4] = str(quantity)  
+                                    v[5] = f"₹{float(price):.2f}"
+                                    total_price = int(quantity) * int(price)
+                                    
+                                    
+                                    tam=int(tam)-int(float(v[6].replace("₹", "")))+total_price
+                                    
+                                    v[6] = f"₹{float(total_price):.2f}"
+                                    delete_and_shift_up(rw, [2, 3,4,5,6,7])         
+                                    
+                                    
+                                        
+                                        
+                                    
+                                
+                        if flag2==1:        
+                            v[4] = str(quantity)  
+                            v[5] = f"₹{float(price):.2f}"
+                            total_price = int(quantity) * int(price)
+                            
+                            
+                            tam=int(tam)-int(float(v[6].replace("₹", "")))+total_price
+                            
+                            v[6] = f"₹{float(total_price):.2f}"
+                            
+                            
+                            treeview.item(item, values=v)
+                        
+                            
+                              
+                            
+                     else:
+                         pass
+    return flag,tam,fl    
+    
 
 def update_qt_n_price():
-    d=load()
+    
     flag=0
     item_id = combo_id.get().upper().replace(" ","")
     item_name = entry_name.get().upper().replace(" ","")
@@ -591,9 +684,18 @@ def on_item_selectedn(var):
     entry_price.delete(0, ctk.END)
     validate_input(selected_item.upper(),d[1],valn,"valn")
     
+def ret_all():
+    current_columns = list(treeview["columns"])
+    
+    if current_columns[0]=='Item ID':
+        messagebox.showinfo("Input Error", "No bill is currently open for updates.")
+    else:
+        pass
+        
+    
 
 def open_bill():
-    clear_fields()
+    
     df=pd.read_csv(CSV_FILE2)
     iterate=df['Bill Id'].astype(str)
     iterate1=df['Customer Name'].astype(str)
@@ -667,6 +769,7 @@ def open_bill():
                 bid=bids[i]
                 response = messagebox.askyesno("Confirmation", f'Do you want to open the Bill with Bill Id "{bids[i]}" and Customer Name: {value[19:]}?')
                 if response:
+                    clear_fields()
                     for item in treeview.get_children():
                         treeview.delete(item)
                     for item in summary_treeview.get_children():
@@ -839,7 +942,7 @@ ctk.CTkButton(frame_form_left, text="Reset Bill", font=font_settings, command=re
 ctk.CTkButton(frame_form_right, text="Print Bill", font=font_settings, command=print_bill,height=50).grid(padx=15, pady=(10,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Open Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Update Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
-ctk.CTkButton(frame_form_right, text="Return Item", font=font_settings, command=clear_fields,height=50).grid(padx=15, pady=(5,10),sticky="nsew")
+ctk.CTkButton(frame_form_right, text="Return All Items", font=font_settings, command=ret_all,height=50).grid(padx=15, pady=(5,10),sticky="nsew")
 
 # Create a frame to contain both treeviews and the total area
 s = ttk.Style()
