@@ -63,6 +63,7 @@ def add_to_bill():
         price = float(price)
         valp.configure(text="")
         flag=1
+
     except ValueError:
         entry_price.delete(0, ctk.END)
         valp.configure(text="Please input numeric \nvalues only.", text_color="red")
@@ -79,24 +80,29 @@ def add_to_bill():
         
         if fl[0] == 0:
             if current_columns[0]=='Item ID':
-                total_price = int(quantity) * price
-                tam=tam+total_price
-                add_row_to_treeview(item_id, item_name, quantity, price, total_price)
-                clear_fields()
-                update_tree(f"₹{tam:.2f}")
+                if price>0 and quantity>0:
+                    total_price = int(quantity) * price
+                    tam=tam+total_price
+                    add_row_to_treeview(item_id, item_name, quantity, price, total_price)
+                    clear_fields()
+                    update_tree(f"₹{tam:.2f}")
+                else:
+                    messagebox.showinfo("Input Error", "The price and quantity must be greater than 0 when adding a new item")   
             else:
-                total_price = int(quantity) * price
-                row_id = summary_treeview.get_children()  # Assuming there's only one row
-                
-                row_data = summary_treeview.item(row_id)["values"]
-                
-                tam = row_data[0].replace("₹", "")
-                tam=int(float(tam))
-                tam=tam+total_price   
-                treeview.insert("", "end",values=(" "," ",item_id, item_name, quantity,f"₹{price:.2f}", f"₹{total_price:.2f}",0))
-                clear_fields()
-                update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
-
+                if price>0 and quantity>0:
+                    total_price = int(quantity) * price
+                    row_id = summary_treeview.get_children()  
+                    
+                    row_data = summary_treeview.item(row_id)["values"]
+                    
+                    tam = row_data[0].replace("₹", "")
+                    tam=int(float(tam))
+                    tam=tam+total_price   
+                    treeview.insert("", "end",values=(" "," ",item_id, item_name, quantity,f"₹{price:.2f}", f"₹{total_price:.2f}",0))
+                    clear_fields()
+                    update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
+                else:
+                    messagebox.showinfo("Input Error", "The price and quantity must be greater than 0 when adding a new item") 
         elif fl[2]==1 and fl[0]==1:    
             update_tree(f"₹{tam:.2f}","₹0.00","₹0.00")
         
@@ -133,7 +139,7 @@ def print_bill():
             dialog.geometry("350x170")
             dialog.resizable(False, False)
             dialog.attributes("-topmost", True)
-            dialog.attributes("-type", "splash")
+            
             
             dialog.grab_set()  # Prevents interaction with the main window until dialog is closed
             window_width = 350
@@ -733,7 +739,7 @@ def open_bill():
     
     dropd.resizable(False, False)
     dropd.attributes("-topmost", True)
-    dropd.attributes("-type", "splash")
+   
     
     dropd.grab_set()  
     window_width = 400
