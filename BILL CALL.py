@@ -89,7 +89,7 @@ def add_to_bill():
                 else:
                     messagebox.showinfo("Input Error", "The price and quantity must be greater than 0 when adding a new item")   
             else:
-                if price>0 and quantity>0:
+                if int(price)>0 and int(quantity)>0:
                     total_price = int(quantity) * price
                     row_id = summary_treeview.get_children()  
                     
@@ -306,6 +306,7 @@ def update_item(tam):
     quantity = entry_quantity.get()
     price = entry_price.get()
     column_0_values = []
+    
     if current_columns[0]=='Item ID':
         for item in treeview.get_children():
              if not treeview.exists(item):
@@ -313,8 +314,10 @@ def update_item(tam):
              else: 
                  if str(item_id) == (treeview.item(item)["values"][0]):
                      flag = 1
-                     response = messagebox.askyesno("Confirmation", f"do you want to update the price or quantity of {item_id}?")
+                     
+                     response = messagebox.askyesno("Confirmation", f"Do you want to update the price or quantity of {item_id}?")
                      if response:
+                        
                         fl=1
                         v = list(treeview.item(item)["values"])  
                         v[2] = str(quantity)  
@@ -327,6 +330,7 @@ def update_item(tam):
                         
                         
                         treeview.item(item, values=v)
+                        
                      
                      else:
                         pass
@@ -408,7 +412,23 @@ def update_item(tam):
                                     tam=0
                                     treeview.item(row1, values=vl)
                                 else:
-                                    messagebox.showinfo("Input Error", "The quantity of the sole remaining item in the bill cannot be zero.")
+                                    response = messagebox.askyesno("Confirmation", f"Would you like to mark {v[4]-int(quantity)} units of {item_id} as returned?")
+                                    if response:
+                                        v[7]="FULL"
+                                        v[4] = str(quantity)  
+                                        v[5] = f"₹{float(price):.2f}"
+                                        total_price = int(quantity) * int(price)
+                                        
+                                        
+                                        tam=int(tam)-int(float(v[6].replace("₹", "")))+total_price
+                                        
+                                        v[6] = f"₹{float(total_price):.2f}"
+                                        
+                                        
+                                        treeview.item(item, values=v)
+                                        update_tree("₹0.00","₹0.00","₹0.00")
+                                    else:    
+                                        messagebox.showinfo("Input Error", "The quantity of the sole remaining item in the bill cannot be zero.")
                                     
                                 
                             
@@ -417,7 +437,9 @@ def update_item(tam):
                                 res = messagebox.askyesno("Confirmation", f"Would you like to mark all units of {item_id} as returned?")
                                 if res:
                                     v[7]="FULL"
+                                    
                                 else:
+                                    
                                     rows = list(treeview.get_children())  # Get all row IDs
                                     
                                     flag2=0
@@ -442,7 +464,8 @@ def update_item(tam):
                                         
                                     
                                 
-                        if flag2==1:        
+                        if flag2==1:  
+                                  
                             v[4] = str(quantity)  
                             v[5] = f"₹{float(price):.2f}"
                             total_price = int(quantity) * int(price)
@@ -693,10 +716,66 @@ def on_item_selectedn(var):
 def ret_all():
     current_columns = list(treeview["columns"])
     
+    def reta():
+        response = messagebox.askyesno("Confirmation", f"Do you want to return all the items on the bill?")
+        if response:
+            for item in treeview.get_children():
+                rw = list(treeview.item(item)["values"])
+                
+                rw[4]=0
+                rw[5]="₹0.00"
+                rw[6]="₹0.00"
+                rw[7]="FULL"
+                treeview.item(item, values=rw)
+            update_tree("₹0.00","₹0.00","₹0.00")
+    def deta():
+        response = messagebox.askyesno("Confirmation", f"Do you want to return all the items on the bill?")
+        if response:
+           children = treeview.get_children()
+           i=len(children)-1
+           while i>0:
+                treeview.delete(children[i])
+                i-=1
+           
+           frw2=children[0]
+           vl=list(treeview.item(frw2, "values"))
+           
+           for i in range(2,8):
+                vl[i]="Deleted"
+           tam=0
+           treeview.item(frw2, values=vl)         
+           update_tree("₹0.00","₹0.00","₹0.00")
     if current_columns[0]=='Item ID':
         messagebox.showinfo("Input Error", "No bill is currently open for updates.")
     else:
-        pass
+        dropd = ctk.CTkToplevel(root)
+    
+        dropd.title(" ")
+        
+        
+        dropd.resizable(False, False)
+        dropd.attributes("-topmost", True)
+    
+        
+        
+        window_width = 180
+        window_height = 150
+        screen_width = dropd.winfo_screenwidth()
+        screen_height = dropd.winfo_screenheight()
+        x = (screen_width // 3) - (window_width // 3)
+        y = (screen_height // 2) - (window_height // 2)
+        dropd.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        # Button 1
+        button1 = ctk.CTkButton(dropd, text="Return All Items",font=("Helvetica", 14, "bold"), command=reta,height=50)
+        button1.grid(row=0, column=0, padx=20, pady=10)
+
+        # Button 2
+        button2 = ctk.CTkButton(dropd, text="Delete Bill",font=("Helvetica", 14, "bold"), command=deta,height=50)
+        button2.grid(row=1, column=0, padx=20, pady=10)
+
+        # Keep the dialog modal
+        dropd.grab_set()  
+        
         
     
 
@@ -948,7 +1027,7 @@ ctk.CTkButton(frame_form_left, text="Reset Bill", font=font_settings, command=re
 ctk.CTkButton(frame_form_right, text="Print Bill", font=font_settings, command=print_bill,height=50).grid(padx=15, pady=(10,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Open Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
 ctk.CTkButton(frame_form_right, text="Update Bill", font=font_settings, command=open_bill,height=50).grid(padx=15, pady=(5,5),sticky="nsew")
-ctk.CTkButton(frame_form_right, text="Return All Items", font=font_settings, command=ret_all,height=50).grid(padx=15, pady=(5,10),sticky="nsew")
+ctk.CTkButton(frame_form_right, text="More Options", font=font_settings, command=ret_all,height=50).grid(padx=15, pady=(5,10),sticky="nsew")
 
 # Create a frame to contain both treeviews and the total area
 s = ttk.Style()
